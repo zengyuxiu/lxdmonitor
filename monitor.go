@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	lxd "github.com/lxc/lxd/client"
 	"log"
 	"net/http"
 	"time"
@@ -9,7 +10,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func monitoer_srv() {
+func monitoer_srv(client lxd.InstanceServer) {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/network/{name}/{nic}/{operation}", func(w http.ResponseWriter, r *http.Request) {
@@ -19,52 +20,51 @@ func monitoer_srv() {
 		prt := vars["operation"]
 		status := true
 		var statusinfo string
-		if prt == "start"{
+		if prt == "start" {
 			go func() {
-				for  status {
-					info := Getnetstat(name,nic)
-					Netstats.WithLabelValues(name,nic,"BytesReceived").Observe(float64(info.BytesReceived))
-					Netstats.WithLabelValues(name,nic,"BytesSent").Observe(float64(info.BytesSent))
-					Netstats.WithLabelValues(name,nic,"PacketsReceived").Observe(float64(info.PacketsReceived))
-					Netstats.WithLabelValues(name,nic,"PacketsSent").Observe(float64(info.PacketsSent))
-					time.Sleep(time.Second*5)
+				for status {
+					info := Getnetstat(name, nic, client)
+					Netstats.WithLabelValues(name, nic, "BytesReceived").Observe(float64(info.BytesReceived))
+					Netstats.WithLabelValues(name, nic, "BytesSent").Observe(float64(info.BytesSent))
+					Netstats.WithLabelValues(name, nic, "PacketsReceived").Observe(float64(info.PacketsReceived))
+					Netstats.WithLabelValues(name, nic, "PacketsSent").Observe(float64(info.PacketsSent))
+					time.Sleep(time.Second * 5)
 				}
 			}()
-			statusinfo = fmt.Sprintf("instance name:%s\ninterface:%s\nmonitor status: start",name,nic)
+			statusinfo = fmt.Sprintf("instance name:%s\ninterface:%s\nmonitor status: start", name, nic)
 			_, _ = w.Write([]byte(statusinfo))
-		}else if prt == "stop"{
+		} else if prt == "stop" {
 			//todo: 停止监控的逻辑
 			status = false
-			statusinfo = fmt.Sprintf("instance name:%s\ninterface:%s\nmonitor status: stop",name,nic)
+			statusinfo = fmt.Sprintf("instance name:%s\ninterface:%s\nmonitor status: stop", name, nic)
 			_, _ = w.Write([]byte(statusinfo))
 		}
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(302)
 	})
-	router.HandleFunc("/instance/{name}/{type}/{operation}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/instance/{name}/{operation}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(302)
 		vars := mux.Vars(r)
 		name := vars["name"]
-		types := vars["type"]
 		prt := vars["operation"]
 		status := true
 		var statusinfo string
-		if prt == "start"{
+		if prt == "start" {
 			go func() {
-				for  status {
-					info := Getsource(name,types)
-					Source.WithLabelValues(types,name,"CPU").Set(float64(info.CpuUsage))
-					Source.WithLabelValues(types,name,"MEM").Set(float64(info.MemUsage))
-					time.Sleep(time.Second*5)
+				for status {
+					info := Getsource(name, client)
+					Source.WithLabelValues(name, "CPU").Set(float64(info.CpuUsage))
+					Source.WithLabelValues(name, "MEM").Set(float64(info.MemUsage))
+					time.Sleep(time.Second * 5)
 				}
 			}()
-			statusinfo = fmt.Sprintf("instance name:%s\ninstance type:%s\nmonitor status: start",name,types)
+			statusinfo = fmt.Sprintf("instance name:%s\nmonitor status: start\n", name)
 			_, _ = w.Write([]byte(statusinfo))
-		}else if prt == "stop"{
+		} else if prt == "stop" {
 			//todo: 停止监控的逻辑
 			status = false
-			statusinfo = fmt.Sprintf("instance name:%s\ninstance type:%s\nmonitor status: stop",name,types)
+			statusinfo = fmt.Sprintf("instance name:%s\nmonitor status: stop\n", name)
 			_, _ = w.Write([]byte(statusinfo))
 		}
 	})

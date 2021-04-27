@@ -1,5 +1,4 @@
 server:
   port: 8443
-  host: "192.168.31.14"
   cert: "/home/zyx/.config/lxc/client.crt"
   key: "/home/zyx/.config/lxc/client.key"
