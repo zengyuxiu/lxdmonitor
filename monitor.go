@@ -13,21 +13,22 @@ import (
 func monitoer_srv(client lxd.InstanceServer) {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/network/{name}/{nic}/{operation}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/network/{name}/{nic}/{role}/{operation}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		name := vars["name"]
 		nic := vars["nic"]
 		prt := vars["operation"]
+		role := vars["role"]
 		status := true
 		var statusinfo string
 		if prt == "start" {
 			go func() {
 				for status {
 					info := Getnetstat(name, nic, client)
-					Netstats.WithLabelValues(name, nic, "BytesReceived").Observe(float64(info.BytesReceived))
-					Netstats.WithLabelValues(name, nic, "BytesSent").Observe(float64(info.BytesSent))
-					Netstats.WithLabelValues(name, nic, "PacketsReceived").Observe(float64(info.PacketsReceived))
-					Netstats.WithLabelValues(name, nic, "PacketsSent").Observe(float64(info.PacketsSent))
+					Netstats.WithLabelValues(role, name, nic, "BytesReceived").Set(float64(info.BytesReceived))
+					Netstats.WithLabelValues(role, name, nic, "BytesSent").Set(float64(info.BytesSent))
+					Netstats.WithLabelValues(role, name, nic, "PacketsReceived").Set(float64(info.PacketsReceived))
+					Netstats.WithLabelValues(role, name, nic, "PacketsSent").Set(float64(info.PacketsSent))
 					time.Sleep(time.Second * 5)
 				}
 			}()
@@ -42,20 +43,21 @@ func monitoer_srv(client lxd.InstanceServer) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(302)
 	})
-	router.HandleFunc("/instance/{name}/{operation}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/instance/{name}/{role}/{operation}", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(302)
 		vars := mux.Vars(r)
 		name := vars["name"]
 		prt := vars["operation"]
+		role := vars["role"]
 		status := true
 		var statusinfo string
 		if prt == "start" {
 			go func() {
 				for status {
 					info := Getsource(name, client)
-					Source.WithLabelValues(name, "CPU").Set(float64(info.CpuUsage))
-					Source.WithLabelValues(name, "MEM").Set(float64(info.MemUsage))
+					Source.WithLabelValues(role, name, "CPU").Set(float64(info.CpuUsage))
+					Source.WithLabelValues(role, name, "MEM").Set(float64(info.MemUsage))
 					time.Sleep(time.Second * 5)
 				}
 			}()

@@ -8,15 +8,15 @@ import (
 )
 
 var (
-	Netstats = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	Netstats = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "netstats",
 		Help: "record net status of instance",
 	},
-		[]string{"instance", "interface", "type"})
+		[]string{"role", "instance", "interface", "netdatatype"})
 	Source = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "source",
 		Help: "record cpu&mem status of instance",
-	}, []string{"instance", "sourcetype"})
+	}, []string{"role", "instance", "sourcetype"})
 )
 
 func prometheus_srv() {
